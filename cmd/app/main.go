@@ -1,11 +1,10 @@
+// main.go
 package main
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 
-	_ "github.com/lib/pq" // Assuming you're using PostgreSQL, adjust if using a different database
 	"github.com/thongsoi/testc/database"
 	"github.com/thongsoi/testc/internal/order"
 )
@@ -18,17 +17,15 @@ func main() {
 	}
 	defer database.CloseDB()
 
-	// Set up routes
-	http.HandleFunc("/", order.FormHandler)
-	http.HandleFunc("/get-markets", order.GetMarketsHandler)
-	http.HandleFunc("/get-products", order.GetProductsHandler)
-	http.HandleFunc("/submit-order", order.SubmitOrderHandler)
+	// Set up HTTP handlers
+	http.HandleFunc("/form", order.FormHandler)
+	http.HandleFunc("/markets", order.GetMarketsHandler)
+	http.HandleFunc("/products", order.GetProductsHandler)
+	http.HandleFunc("/submit", order.SubmitOrderHandler)
 
-	// Serve static files (if any)
-	fs := http.FileServer(http.Dir("static"))
-	http.Handle("/static/", http.StripPrefix("/static/", fs))
-
-	// Start the server
-	fmt.Println("Server is running on http://localhost:8080")
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	// Start the HTTP server
+	log.Println("Starting server on :8080")
+	if err := http.ListenAndServe(":8080", nil); err != nil {
+		log.Fatalf("Failed to start server: %v", err)
+	}
 }

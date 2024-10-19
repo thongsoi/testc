@@ -7,19 +7,19 @@ import (
 )
 
 type Market struct {
-	ID     int    `htmx:"marketID" json:"marketID" db:"market_id"`
-	EnName string `htmx:"enName" json:"enName" db:"en_name"`
-}
-
-type SubMarket struct {
-	ID     int    `htmx:"submarketID" json:"submarketID" db:"submarket_id"`
-	EnName string `htmx:"enName" json:"enName" db:"en_name"`
+	ID     int    `json:"id"`
+	EnName string `json:"en_name"`
 }
 
 type Product struct {
 	ID    int     `json:"id"`
 	Name  string  `json:"name"`
 	Price float64 `json:"price"`
+}
+
+type SubMarket struct {
+	ID     int    `htmx:"submarketID" json:"submarketID" db:"submarket_id"`
+	EnName string `htmx:"enName" json:"enName" db:"en_name"`
 }
 
 type Order struct {
