@@ -1,3 +1,4 @@
+// database/database.go
 package database
 
 import (
@@ -23,15 +24,13 @@ func InitDB() error {
 	// Get the connection string from the environment
 	connStr := os.Getenv("DATABASE_URL")
 	if connStr == "" {
-		log.Println("DATABASE_URL is not set in the environment")
-		return err
+		log.Fatal("DATABASE_URL is not set in the environment")
 	}
 
 	// Initialize the database connection
 	DB, err = sql.Open("postgres", connStr)
 	if err != nil {
-		log.Printf("Error opening database connection: %v", err)
-		return err
+		log.Fatalf("Error opening database connection: %v", err)
 	}
 
 	// Set connection pool settings
@@ -41,8 +40,7 @@ func InitDB() error {
 
 	// Ping database to check connection
 	if err = DB.Ping(); err != nil {
-		log.Printf("Error pinging database: %v", err)
-		return err
+		log.Fatalf("Error pinging database: %v", err)
 	}
 	log.Println("Database connection established")
 	return nil
@@ -60,7 +58,7 @@ func CloseDB() error {
 	return nil
 }
 
-// GetDB returns the existing DB instance
+// GetDB returns the database connection pool
 func GetDB() *sql.DB {
 	if DB == nil {
 		log.Fatal("Database connection is not initialized")
