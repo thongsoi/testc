@@ -5,7 +5,6 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"fmt"
 	"html/template"
 	"log"
 	"net/http"
@@ -15,16 +14,23 @@ import (
 	"github.com/thongsoi/testc/database"
 )
 
+var orderTemplate *template.Template
+
+// Initialize templates once at server startup
+func init() {
+	var err error
+	orderTemplate, err = template.ParseFiles("templates/order.html")
+	if err != nil {
+		log.Fatal("Unable to parse template:", err)
+	}
+}
+
+// FormHandler renders the order form with markets data
 func FormHandler(w http.ResponseWriter, r *http.Request) {
 	markets, err := FetchMarkets(database.GetDB())
 	if err != nil {
 		http.Error(w, "Unable to fetch markets", http.StatusInternalServerError)
 		return
-	}
-
-	tmpl, err := template.ParseFiles("templates/order.html")
-	if err != nil {
-		log.Fatal(err)
 	}
 
 	data := struct {
@@ -33,12 +39,13 @@ func FormHandler(w http.ResponseWriter, r *http.Request) {
 		Markets: markets,
 	}
 
-	err = tmpl.Execute(w, data)
+	err = orderTemplate.Execute(w, data)
 	if err != nil {
 		http.Error(w, "Unable to render template", http.StatusInternalServerError)
 	}
 }
 
+// GetMarketsHandler returns a list of markets in JSON format
 func GetMarketsHandler(w http.ResponseWriter, r *http.Request) {
 	markets, err := FetchMarkets(database.GetDB())
 	if err != nil {
@@ -46,86 +53,73 @@ func GetMarketsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(markets)
+	respondWithJSON(w, markets)
 }
 
+// GetProductsHandler returns products based on market ID in JSON format
 func GetProductsHandler(w http.ResponseWriter, r *http.Request) {
-	marketID := r.URL.Query().Get("market_id")
-	marketIDInt, err := strconv.Atoi(marketID)
+	marketID, err := getQueryParamInt(r, "market_id")
 	if err != nil {
 		http.Error(w, "Invalid market ID", http.StatusBadRequest)
 		return
 	}
 
-	products, err := FetchProductsByMarket(database.GetDB(), marketIDInt)
+	products, err := FetchProductsByMarket(database.GetDB(), marketID)
 	if err != nil {
 		http.Error(w, "Unable to fetch products", http.StatusInternalServerError)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(products)
+	respondWithJSON(w, products)
 }
 
+// SubmitOrderHandler processes the order form submission
 func SubmitOrderHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
 		return
 	}
 
-	err := r.ParseForm()
-	if err != nil {
+	if err := r.ParseForm(); err != nil {
 		http.Error(w, "Unable to parse form", http.StatusBadRequest)
 		return
 	}
 
-	// Validate form inputs
-	marketID := r.FormValue("market_id")
-	productID := r.FormValue("product_id")
-	quantity := r.FormValue("quantity")
-
-	if marketID == "" || productID == "" || quantity == "" {
-		http.Error(w, "Missing required fields", http.StatusBadRequest)
-		return
-	}
-
-	// Convert form values to appropriate types
-	marketIDInt, err := strconv.Atoi(marketID)
+	marketID, err := getFormValueInt(r, "market_id")
 	if err != nil {
 		http.Error(w, "Invalid market ID", http.StatusBadRequest)
 		return
 	}
 
-	productIDInt, err := strconv.Atoi(productID)
+	productID, err := getFormValueInt(r, "product_id")
 	if err != nil {
 		http.Error(w, "Invalid product ID", http.StatusBadRequest)
 		return
 	}
 
-	quantityInt, err := strconv.Atoi(quantity)
+	quantity, err := getFormValueInt(r, "quantity")
 	if err != nil {
 		http.Error(w, "Invalid quantity", http.StatusBadRequest)
 		return
 	}
 
-	// Process the order
-	// For now, we'll just return a confirmation message
-	fmt.Println(marketIDInt)
-	fmt.Println(productIDInt)
-	fmt.Println(quantityInt)
-
-	//test uses of 3 variables
+	// Process order: Save the order in the database (to be implemented)
+	if err := processOrder(marketID, productID, quantity); err != nil {
+		http.Error(w, "Unable to process order", http.StatusInternalServerError)
+		return
+	}
 
 	w.Header().Set("Content-Type", "text/html")
 	w.Write([]byte("<div>Order submitted successfully!</div>"))
 }
 
+// FetchMarkets retrieves all markets from the database
 func FetchMarkets(db *sql.DB) ([]Market, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	rows, err := db.QueryContext(ctx, "SELECT id, en_name FROM markets")
+	query := "SELECT id, en_name FROM markets"
+	rows, err := db.QueryContext(ctx, query)
 	if err != nil {
 		return nil, err
 	}
@@ -147,11 +141,13 @@ func FetchMarkets(db *sql.DB) ([]Market, error) {
 	return markets, nil
 }
 
+// FetchProductsByMarket retrieves products by market ID
 func FetchProductsByMarket(db *sql.DB, marketID int) ([]Product, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	rows, err := db.QueryContext(ctx, "SELECT id, name, price FROM products WHERE market_id = $1", marketID)
+	query := "SELECT id, name, price FROM products WHERE market_id = $1"
+	rows, err := db.QueryContext(ctx, query, marketID)
 	if err != nil {
 		return nil, err
 	}
@@ -171,4 +167,35 @@ func FetchProductsByMarket(db *sql.DB, marketID int) ([]Product, error) {
 	}
 
 	return products, nil
+}
+
+// Helper functions
+
+// processOrder saves the order to the database (to be implemented)
+func processOrder(marketID, productID, quantity int) error {
+	db := database.GetDB()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	query := "INSERT INTO orders (market_id, product_id, quantity) VALUES ($1, $2, $3)"
+	_, err := db.ExecContext(ctx, query, marketID, productID, quantity)
+	return err
+}
+
+// respondWithJSON is a utility to send a JSON response
+func respondWithJSON(w http.ResponseWriter, data interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(data)
+}
+
+// getFormValueInt retrieves and converts a form value to an int
+func getFormValueInt(r *http.Request, key string) (int, error) {
+	value := r.FormValue(key)
+	return strconv.Atoi(value)
+}
+
+// getQueryParamInt retrieves and converts a query param to an int
+func getQueryParamInt(r *http.Request, key string) (int, error) {
+	value := r.URL.Query().Get(key)
+	return strconv.Atoi(value)
 }

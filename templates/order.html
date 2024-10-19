@@ -4,63 +4,66 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Order Form</title>
+    <script src="https://unpkg.com/htmx.org"></script>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-        }
-        .form-group {
-            margin-bottom: 15px;
-        }
-        .form-group label {
-            display: block;
-            margin-bottom: 5px;
-        }
-        .form-group select, .form-group input {
-            width: 100%;
-            padding: 8px;
-            box-sizing: border-box;
-        }
-        .form-group button {
-            padding: 10px 15px;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            cursor: pointer;
-        }
-        .form-group button:hover {
-            background-color: #45a049;
-        }
+        /* Add any necessary styles here */
+        .error { color: red; }
+        .success { color: green; }
     </style>
-    <!-- Include HTMX library -->
-    <script src="https://unpkg.com/htmx.org@2.0.3"></script>
 </head>
 <body>
-    <h1>Order Form</h1>
-    <form action="/submit" method="post">
-        <div class="form-group">
-            <label for="market_id">Select Market:</label>
-            <select name="market_id" id="market_id" hx-get="/products" hx-target="#product_id" hx-trigger="change" required>
-                <option value="">--Please choose a market--</option>
-                {{range .Markets}}
-                <option value="{{.ID}}">{{.EnName}}</option>
-                {{end}}
-            </select>
-        </div>
-        <div class="form-group">
-            <label for="product_id">Select Product:</label>
-            <select name="product_id" id="product_id" required>
-                <option value="">--Please choose a product--</option>
-                <!-- Products will be populated via HTMX -->
-            </select>
-        </div>
-        <div class="form-group">
-            <label for="quantity">Quantity:</label>
-            <input type="number" name="quantity" id="quantity" min="1" required>
-        </div>
-        <div class="form-group">
-            <button type="submit">Submit Order</button>
-        </div>
+    <h1>Submit Your Order</h1>
+
+    <form id="order-form" hx-post="/submit-order" hx-target="#response" hx-swap="innerHTML">
+        <label for="market">Market:</label>
+        <select id="market" name="market_id" hx-get="/get-markets" hx-trigger="load" hx-target="#market" hx-swap="outerHTML">
+            <option value="">Loading markets...</option>
+            <!-- HTMX will replace this with the market options dynamically -->
+        </select>
+
+        <br>
+
+        <label for="product">Product:</label>
+        <select id="product" name="product_id" hx-get="/get-products" hx-target="#product" hx-swap="outerHTML" disabled>
+            <option value="">Select a market first</option>
+            <!-- HTMX will populate this based on the selected market -->
+        </select>
+
+        <br>
+
+        <label for="quantity">Quantity:</label>
+        <input type="number" id="quantity" name="quantity" min="1" required>
+
+        <br>
+
+        <button type="submit">Submit Order</button>
     </form>
+
+    <div id="response"></div>
+
+    <script>
+        // Enable product dropdown only when a market is selected
+        document.addEventListener('htmx:afterOnLoad', function (evt) {
+            if (evt.detail.path === '/get-markets' || evt.detail.path.startsWith('/get-products')) {
+                const marketSelect = document.querySelector('#market');
+                const productSelect = document.querySelector('#product');
+
+                if (marketSelect && marketSelect.value) {
+                    productSelect.disabled = false;
+                } else {
+                    productSelect.disabled = true;
+                }
+            }
+        });
+
+        // Trigger fetching products when a market is selected
+        document.querySelector('#market').addEventListener('change', function () {
+            const marketID = this.value;
+            if (marketID) {
+                this.setAttribute('hx-get', `/get-products?market_id=${marketID}`);
+                this.setAttribute('hx-trigger', 'change');
+            }
+        });
+    </script>
 </body>
 </html>
