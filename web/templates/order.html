@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Create Order</title>
+    <script src="https://unpkg.com/htmx.org@1.7.0"></script>
+</head>
+<body>
+    <form action="/submit-order" method="POST">
+        <label for="market">Select Market:</label>
+        <select id="market" name="marketID" hx-get="/api/markets" hx-target="#market" hx-trigger="load">
+            <option value="">Select a Market</option>
+        </select>
+
+        <label for="submarket">Select Submarket:</label>
+        <select id="submarket" name="submarketID" hx-get="/api/submarkets?marketID={marketID}" hx-target="#submarket" hx-trigger="change">
+            <option value="">Select a Submarket</option>
+        </select>
+
+        <button type="submit">Submit</button>
+    </form>
+</body>
+</html>
