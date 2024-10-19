@@ -35,6 +35,17 @@ func FormHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func GetMarketsHandler(w http.ResponseWriter, r *http.Request) {
+	markets, err := FetchMarkets(database.GetDB())
+	if err != nil {
+		http.Error(w, "Unable to fetch markets", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(markets)
+}
+
 func GetProductsHandler(w http.ResponseWriter, r *http.Request) {
 	marketID := r.URL.Query().Get("market_id")
 	marketIDInt, err := strconv.Atoi(marketID)

@@ -21,6 +21,7 @@ func main() {
 
 	// Set up routes
 	http.HandleFunc("/", order.FormHandler)
+	http.HandleFunc("/get-markets", order.GetMarketsHandler)
 	http.HandleFunc("/get-products", order.GetProductsHandler)
 	http.HandleFunc("/submit-order", order.SubmitOrderHandler)
 
@@ -47,7 +48,7 @@ func initDB() (*sql.DB, error) {
 	}
 
 	// Set the database connection in your package
-	database.SetDB(db)
+	database.GetDB()
 
 	return db, nil
 }
