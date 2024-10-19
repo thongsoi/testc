@@ -13,12 +13,15 @@ import (
 )
 
 func main() {
-	connStr := "postgres://dev1:dev1pg@localhost:5432/biomassx"
+	connStr := "postgres://dev1:dev1pg@localhost:5432/biomassx?sslmode=disable"
 	db, err := sql.Open("postgres", connStr)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer db.Close()
+	//r := mux.NewRouter()
+	// Static files
+	//http.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 
 	orderRepo := &repositories.OrderRepository{DB: db}
 	orderService := &services.OrderService{Repo: orderRepo}
